@@ -1,13 +1,57 @@
 import express from 'express';
 import pool from './Config/db.js';
 import { config } from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 config();
+
+const secretkey = process.env.SecretKey;
+const port = process.env.PORT || 3000; 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port = process.env.PORT || 3000; 
+
+app.post('/login', async (req, res) => {
+    const { usuario, email, contrasenia } = req.body;
+
+    const query = 'SELECT * FROM usuario WHERE usuario = ? AND email = ? AND contrasenia = ?';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(query, [usuario, email, contrasenia]);
+        connection.release();
+        if (rows.length > 0) {
+            // Firmamos el token
+            const user = rows[0]; // Asignamos el primer resultado a `user`
+            jwt.sign({ user }, secretkey, { expiresIn: '10m' }, (err, token) => {
+                if (err) {
+                    console.error('Error in jwt.sign:', err);
+                    return res.status(500).send('Error en el servidor');
+                }
+                res.json({ token });
+            });
+        } else {
+            res.status(401).send('Usuario o contraseña incorrectos');
+        }
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+// Crea un usuario (Registrarse)
+// app.post('/usuario', async (req, res) => {
+//     const usuario = req.body;
+    
+//     const sql = 'INSERT INTO usuario SET ?';
+//     try {
+//         const connection = await pool.getConnection();
+//         const [rows] = await connection.query(sql, [usuario]);
+//         connection.release();
+//         res.status(201).json(rows);
+//     }catch(err){
+//         res.status(500).send("Error al conectarse con el servidor");
+//     }
+// });
 
 // Retornar todos los productos
 app.get('/productos', async (req, res) => {
@@ -73,19 +117,6 @@ WHERE
         res.status(500).send('Error al conectarse con el servidor');
     }
 });
-
-// Retorna un usuario
-// app.get('/usuario/:correo/:contrasenia', async (req, res) => {
-//     const query = 'SELECT * FROM usuario WHERE email = ? AND contrasenia = ?;'
-//     try {
-//         const connection = await pool.getConnection();
-//         const [rows] = await connection.query(query);
-//         connection.release();
-//         res.status(200).json(rows);
-//     }catch(err){
-//         res.status(500).send("Error al conectarse con el servidor");
-//     }
-// });
 
 // Crear un carrito
 app.post('/carrito', async (req, res) => {
@@ -190,6 +221,7 @@ app.delete('/usuario/:id', async (req, res) => {
         res.status(500).send("Error al conectarse con el servidor");
     }
 });
+
 
 app.listen(port, () => {
 console.log(`Example app listening`+
