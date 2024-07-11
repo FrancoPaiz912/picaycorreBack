@@ -1,6 +1,7 @@
 import { createPool } from 'mysql2/promise'; //poner type module
 import { config } from 'dotenv';
 config();
+
 const pool = createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -8,6 +9,12 @@ const pool = createPool({
     database: process.env.DB_NAME,
     connectionLimit: 5,
 });
+
+// DB_HOST=34.176.223.26
+// DB_USER=root
+// DB_PASSWORD=/{m}2''I0iZz&/2$
+// DB_NAME=pyc
+// PORT=3000
 
 pool.getConnection()
     .then(connection => {

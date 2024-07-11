@@ -18,7 +18,7 @@ app.get('/productos', async (req, res) => {
         connection.release();
         res.status(200).json(rows);
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
@@ -26,36 +26,37 @@ app.get('/productos', async (req, res) => {
 app.get('/carrito/:id', async (req, res) => {
     const id = req.params.id; // Obteniendo el id del parámetro de la ruta
     const query = `
-    SELECT
-    carrito.idcarrito,
-    carrito.fecha,
-    carrito.preciototal,
-    usuario.idusuario,
-    usuario.nombre,
-    usuario.apellido,
-    usuario.email,
-    usuario.documento,
-    sucursal.idsucursal,
-    sucursal.pais,
-    sucursal.provincia,
-    sucursal.calle,
-    sucursal.barrio,
-    producto.idproducto,
-    producto.nombre AS nombre_producto,
-    producto.precio AS precio_producto,
-    producto.descripcion AS descripcion_producto
-FROM
-    carrito
-JOIN
-    usuario ON carrito.usuario_idusuario = usuario.idusuario
-JOIN
-    sucursal ON carrito.sucursal_idsucursal = sucursal.idsucursal
-JOIN
-    carrito_has_producto ON carrito.idcarrito = carrito_has_producto.carrito_idcarrito
-JOIN
-    producto ON carrito_has_producto.producto_idproducto = producto.idproducto
-WHERE
-    carrito.idcarrito = ?;
+SELECT 
+    c.idcarrito,
+    c.fecha,
+    c.precioTotal,
+    u.idusuario,
+    u.nombre AS usuario_nombre,
+    u.apellido AS usuario_apellido,
+    u.email AS usuario_email,
+    u.documento AS usuario_documento,
+    s.idsucursal,
+    s.pais AS sucursal_pais,
+    s.calle AS sucursal_calle,
+    s.barrio AS sucursal_barrio,
+    p.idproducto,
+    p.nombre AS producto_nombre,
+    p.precio AS producto_precio,
+    p.descripcion AS producto_descripcion,
+    p.categoria AS producto_categoria
+FROM 
+    carrito c
+INNER JOIN 
+    usuario u ON c.usuario_idusuario = u.idusuario
+INNER JOIN 
+    sucursal s ON c.sucursal_idsucursal = s.idsucursal
+INNER JOIN 
+    carrito_has_producto chp ON c.idcarrito = chp.carrito_idcarrito
+INNER JOIN 
+    producto p ON chp.producto_idproducto = p.idproducto
+WHERE 
+    c.idcarrito = ?; 
+
     `;
 
     try {
@@ -74,17 +75,17 @@ WHERE
 });
 
 // Retorna un usuario
-app.get('/usuario/:id', async (req, res) => {
-    const query = 'SELECT * FROM producto';
-    try {
-        const connection = await pool.getConnection();
-        const [rows] = await connection.query(query);
-        connection.release();
-        res.status(200).json(rows);
-    }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
-    }
-});
+// app.get('/usuario/:correo/:contrasenia', async (req, res) => {
+//     const query = 'SELECT * FROM usuario WHERE email = ? AND contrasenia = ?;'
+//     try {
+//         const connection = await pool.getConnection();
+//         const [rows] = await connection.query(query);
+//         connection.release();
+//         res.status(200).json(rows);
+//     }catch(err){
+//         res.status(500).send("Error al conectarse con el servidor");
+//     }
+// });
 
 // Crear un carrito
 app.post('/carrito', async (req, res) => {
@@ -97,7 +98,23 @@ app.post('/carrito', async (req, res) => {
         connection.release();
         res.status(201).json(rows);
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+//Crear tabla intermedia
+app.post('/carrito/producto', async (req, res) => {
+    const carrito = req.body;
+    console.log(carrito); // Agrega esta línea para verificar el contenido de req.body
+
+    const sql = 'INSERT INTO carrito_has_producto SET ?';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(sql, [carrito]);
+        connection.release();
+        res.status(201).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
@@ -112,7 +129,7 @@ app.post('/usuario', async (req, res) => {
         connection.release();
         res.status(201).json(rows);
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
@@ -132,7 +149,7 @@ app.put('/carrito/:id', async (req, res) => {
             res.status(404).send('Carrito no encontrado');
         }
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
@@ -151,7 +168,7 @@ app.delete('/carrito/:id', async (req, res) => {
             res.status(404).send('Carrito no encontrado');
         }
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
@@ -167,10 +184,10 @@ app.delete('/usuario/:id', async (req, res) => {
         if (rows.affectedRows > 0) {
             res.status(204).send(); 
         } else {
-            res.status(404).send('Carrito no encontrado');
+            res.status(404).send('Usuario no encontrado');
         }
     }catch(err){
-        res.send(500).send("Error al conectarse con el servidor");
+        res.status(500).send("Error al conectarse con el servidor");
     }
 });
 
