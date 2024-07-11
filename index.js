@@ -31,7 +31,7 @@ app.post('/login', async (req, res) => {
                 res.json({ token });
             });
         } else {
-            res.status(401).send('Usuario o contraseña incorrectos');
+            res.status(401).send('Usuario, correo o contraseña incorrecta');
         }
     }catch(err){
         res.status(500).send("Error al conectarse con el servidor");
@@ -136,7 +136,6 @@ app.post('/carrito', async (req, res) => {
 //Crear tabla intermedia
 app.post('/carrito/producto', async (req, res) => {
     const carrito = req.body;
-    console.log(carrito); // Agrega esta línea para verificar el contenido de req.body
 
     const sql = 'INSERT INTO carrito_has_producto SET ?';
     try {

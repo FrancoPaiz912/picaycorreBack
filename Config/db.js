@@ -10,12 +10,6 @@ const pool = createPool({
     connectionLimit: 5,
 });
 
-// DB_HOST=34.176.223.26
-// DB_USER=root
-// DB_PASSWORD=/{m}2''I0iZz&/2$
-// DB_NAME=pyc
-// PORT=3000
-
 pool.getConnection()
     .then(connection => {
         console.log('Connected to the database');
