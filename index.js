@@ -54,6 +54,20 @@ app.post('/login', async (req, res) => {
 // });
 
 // Retornar todos los productos
+app.get('/usuario', async (req, res) => {
+    const query = 'SELECT * FROM usuario';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(query);
+        connection.release();
+        console.log(rows);
+        res.status(200).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+// Retornar todos los productos
 app.get('/productos', async (req, res) => {
     const query = 'SELECT * FROM producto';
     try {
