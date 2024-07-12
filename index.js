@@ -38,7 +38,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Crea un usuario (Registrarse)
+// Crea un usuario (Registrarse) //Preguntar a facu por el registro
 // app.post('/usuario', async (req, res) => {
 //     const usuario = req.body;
     
@@ -60,7 +60,33 @@ app.get('/usuario', async (req, res) => {
         const connection = await pool.getConnection();
         const [rows] = await connection.query(query);
         connection.release();
-        console.log(rows);
+        res.status(200).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+//Retorna las sucursales
+app.get('/sucursal', async (req, res) => {
+    const query = 'SELECT * FROM sucursal';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(query);
+        connection.release();
+        res.status(200).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+// Retornar todos los productos (Esto es para dividir cuando se muestren en panchos, snacks, etc)
+app.get('/productos/:categoria', async (req, res) => {
+    const categoria = req.params.categoria;
+    const query = 'SELECT * FROM producto WHERE categoria = ?';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(query, [categoria]);
+        connection.release();
         res.status(200).json(rows);
     }catch(err){
         res.status(500).send("Error al conectarse con el servidor");
@@ -82,7 +108,7 @@ app.get('/productos', async (req, res) => {
 
 // Obtener un carrito particular
 app.get('/carrito/:id', async (req, res) => {
-    const id = req.params.id; // Obteniendo el id del parámetro de la ruta
+    const id = req.params.id; 
     const query = `
 SELECT 
     c.idcarrito,
@@ -132,6 +158,21 @@ WHERE
     }
 });
 
+//Crear un producto 
+app.post('/producto', async (req, res) => {
+    const producto = req.body;
+    
+    const sql = 'INSERT INTO producto SET ?';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(sql, [producto]);
+        connection.release();
+        res.status(201).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
 // Crear un carrito
 app.post('/carrito', async (req, res) => {
     const carrito = req.body;
@@ -140,6 +181,23 @@ app.post('/carrito', async (req, res) => {
     try {
         const connection = await pool.getConnection();
         const [rows] = await connection.query(sql, [carrito]);
+        connection.release();
+        console.log(rows);
+        res.status(201).json(rows);
+    }catch(err){
+        console.log(err);
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
+//Crear un producto 
+app.post('/sucursal', async (req, res) => {
+    const sucursal = req.body;
+    
+    const sql = 'INSERT INTO sucursal SET ?';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(sql, [sucursal]);
         connection.release();
         res.status(201).json(rows);
     }catch(err){
