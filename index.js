@@ -2,7 +2,7 @@ import express from 'express';
 import pool from './Config/db.js';
 import { config } from 'dotenv';
 import jwt from 'jsonwebtoken';
-
+import cors from 'cors';
 config();
 
 const secretkey = process.env.SecretKey;
