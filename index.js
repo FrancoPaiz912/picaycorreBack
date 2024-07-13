@@ -106,46 +106,53 @@ app.get('/productos', async (req, res) => {
     }
 });
 
+app.get('/carrito', async (req, res) => {
+    const query = 'SELECT * FROM carrito';
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(query);
+        connection.release();
+        res.status(200).json(rows);
+    }catch(err){
+        res.status(500).send("Error al conectarse con el servidor");
+    }
+});
+
 // Obtener un carrito particular
 app.get('/carrito/:id', async (req, res) => {
     const id = req.params.id; 
     const query = `
-SELECT 
-    c.idcarrito,
-    c.fecha,
-    c.precioTotal,
-    u.idusuario,
-    u.nombre AS usuario_nombre,
-    u.apellido AS usuario_apellido,
-    u.email AS usuario_email,
-    u.documento AS usuario_documento,
-    s.idsucursal,
-    s.pais AS sucursal_pais,
-    s.calle AS sucursal_calle,
-    s.barrio AS sucursal_barrio,
-    p.idproducto,
-    p.nombre AS producto_nombre,
-    p.precio AS producto_precio,
-    p.descripcion AS producto_descripcion,
-    p.categoria AS producto_categoria
-FROM 
-    carrito c
-INNER JOIN 
-    usuario u ON c.usuario_idusuario = u.idusuario
-INNER JOIN 
-    sucursal s ON c.sucursal_idsucursal = s.idsucursal
-INNER JOIN 
-    carrito_has_producto chp ON c.idcarrito = chp.carrito_idcarrito
-INNER JOIN 
-    producto p ON chp.producto_idproducto = p.idproducto
-WHERE 
-    c.idcarrito = ?; 
-
-    `;
-
+SELECT
+    carrito.fecha,
+    carrito.preciototal,
+    usuario.nombre AS nombre_real,
+    usuario.apellido,
+    usuario.email,
+    usuario.documento,
+    usuario.usuario AS nombre_usuario,
+    sucursal.pais,
+    sucursal.calle,
+    sucursal.barrio,
+    producto.nombre AS nombre_producto,
+    producto.precio AS precio_producto,
+    producto.descripcion AS descripcion_producto,
+    producto.categoria AS categoria_producto
+FROM
+    carrito
+JOIN
+    usuario ON carrito.usuario_idusuario = usuario.idusuario
+JOIN
+    sucursal ON carrito.sucursal_idsucursal = sucursal.idsucursal
+JOIN
+    carrito_has_producto ON carrito.idcarrito = carrito_has_producto.carrito_idcarrito
+JOIN
+    producto ON carrito_has_producto.producto_idproducto = producto.idproducto
+WHERE
+    carrito.idcarrito = ?;
+`;
     try {
         const connection = await pool.getConnection();
-        const [rows] = await connection.query(query, [id]); 
+        const [rows] = await connection.query(query, id); 
         connection.release();
         
         if (rows.length > 0) {
@@ -160,23 +167,56 @@ WHERE
 
 //Crear un producto 
 app.post('/producto', async (req, res) => {
-    const producto = req.body;
-    
-    const sql = 'INSERT INTO producto SET ?';
+    const { precioTotal, usuario_idusuario, sucursal_idsucursal, fecha, productos } = req.body;
+
+    const connection = await pool.getConnection();
     try {
-        const connection = await pool.getConnection();
-        const [rows] = await connection.query(sql, [producto]);
+        // Iniciar transacción
+        await connection.beginTransaction();
+
+        // Verificar si el usuario existe
+        const [userResult] = await connection.query('SELECT 1 FROM usuario WHERE idusuario = ?', [usuario_idusuario]);
+        if (userResult.length === 0) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        // Verificar si la sucursal existe
+        const [sucursalResult] = await connection.query('SELECT 1 FROM sucursal WHERE idsucursal = ?', [sucursal_idsucursal]);
+        if (sucursalResult.length === 0) {
+            throw new Error('Sucursal no encontrada');
+        }
+
+        // Paso 1: Insertar el carrito
+        const queryCarrito = 'INSERT INTO carrito (fecha, precioTotal, usuario_idusuario, sucursal_idsucursal) VALUES (?, ?, ?, ?)';
+        console.log("Punto de corte");
+        const [result] = await connection.query(queryCarrito, [fecha, precioTotal, usuario_idusuario, sucursal_idsucursal]);
+
+        console.log("Result", result);
+        const carritoId = result.insertId; // Obtener el ID del carrito recién creado
+
+        // Paso 2: Añadir productos al carrito (relación de muchos a muchos)
+        const queryCarritoProducto = 'INSERT INTO carrito_has_producto (carrito_idcarrito, producto_idproducto) VALUES ?';
+        const carritoProductoValues = productos.map(producto => [carritoId, producto]);
+        await connection.query(queryCarritoProducto, [carritoProductoValues]);
+
+        // Confirmar la transacción
+        await connection.commit();
+        res.status(201).send({ message: 'Carrito y productos creados con éxito', carritoId });
+    } catch (err) {
+        // Revertir la transacción en caso de error
+        await connection.rollback();
+        console.error('Error al crear carrito:', err);
+        res.status(500).send({ message: 'Error al crear carrito', error: err.message });
+    } finally {
+        // Liberar la conexión
         connection.release();
-        res.status(201).json(rows);
-    }catch(err){
-        res.status(500).send("Error al conectarse con el servidor");
-    }
+    }
 });
+
 
 // Crear un carrito
 app.post('/carrito', async (req, res) => {
     const carrito = req.body;
-    
     const sql = 'INSERT INTO carrito SET ?';
     try {
         const connection = await pool.getConnection();
